@@ -21,7 +21,7 @@ def extract_from_xml(name):
     try:
         page = requests.get(f'https://boardgamegeek.com/xmlapi/collection/{name}', timeout=10)
         if page.status_code != 200:
-            log_progress("Unexpected issue came up. please try again")
+            log_progress(f'{page.status_code}: Unexpected issue came up. please try again')
             return temp_df, False
         root = ET.fromstring(page.text)
         if root.tag == 'errors':
@@ -57,13 +57,13 @@ def extract_from_xml(name):
 def extract_game_data(this_game_id,mechanics_df, designer_df):
     """extract game mechanics and designers for a specific boardgame from BBG XML API"""
     try:
-        page = requests.get(f'https://api.geekdo.com/xmlapi/boardgame/{this_game_id}', timeout=10)
+        page = requests.get(f'https://boardgamegeek.com/xmlapi/boardgame/{this_game_id}', timeout=10)
         root = ET.fromstring(page.text)
     except requests.exceptions.RequestException as e:
         log_progress(f"Network error while fetching game data for ID {this_game_id}: {e}")
         return mechanics_df, designer_df
     except ET.ParseError:
-        log_progress(f"Error parsing XML for game ID {this_game_id}. Skipping.")
+        log_progress(f"{page.status_code}: Error parsing XML for game ID {this_game_id}. Skipping.")
         return mechanics_df, designer_df
     mechanics_data = []
     designers_data = []
@@ -96,7 +96,7 @@ while VALID is False:
         continue
     print("Username is: " + username)
     log_progress('Username entered. Starting collection extraction')
-    collection_df, VALID = extract_from_xml(username)  
+    collection_df, VALID = extract_from_xml(username)
 
 log_progress('Collection extraction complete')
 
@@ -172,7 +172,6 @@ try:
         sql_designer_df.to_excel(writer, sheet_name='Game_Designers')
         
     log_progress('Load Data to Database complete')
-
 
     query_statment = ("SELECT `Game Mechanic`, count(*) as 'Count' "
                     + "from MECHANICS "
