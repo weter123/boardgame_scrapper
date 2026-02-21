@@ -1,4 +1,4 @@
-# BGG Scrapper
+# BGG Scrapper (require update due to changes to XML API Use Requirments )
 
 BGG Scrapper is a Python-based package designed to scrape data from the BoardGameGeek (BGG) website using the BGG XML API2 and web scraping technologies. The extracted data is processed, stored in a SQLite database, and Excel files.
 
