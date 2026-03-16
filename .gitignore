@@ -4,3 +4,4 @@ bgg_log.txt
 /dist/
 *.spec
 *.xlsx
+Config.py

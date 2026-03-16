@@ -7,6 +7,14 @@ import pandas as pd
 import requests
 import sqlite3
 
+from config import API_TOKEN
+
+headers = {
+    "Authorization": f"Bearer {API_TOKEN}",
+    "User-Agent": "Mozilla/5.0"
+}
+
+
 def log_progress(message):
     """ logs progress"""
     timestamp_format = '%Y-%h-%d-%H:%M:%S' # Year-Monthname-Day-Hour-Minute-Second
@@ -19,7 +27,7 @@ def extract_from_xml(name):
     """extract boardgamegeek user's collection data from BGG XML API"""
     temp_df = pd.DataFrame(columns=['Id','Name', 'Rating'])
     try:
-        page = requests.get(f'https://boardgamegeek.com/xmlapi/collection/{name}', timeout=10)
+        page = requests.get(f'https://boardgamegeek.com/xmlapi/collection/{name}',  headers=headers, timeout=10)
         if page.status_code != 200:
             log_progress(f'{page.status_code}: Unexpected issue came up. please try again')
             return temp_df, False
@@ -57,7 +65,7 @@ def extract_from_xml(name):
 def extract_game_data(this_game_id,mechanics_df, designer_df):
     """extract game mechanics and designers for a specific boardgame from BBG XML API"""
     try:
-        page = requests.get(f'https://boardgamegeek.com/xmlapi/boardgame/{this_game_id}', timeout=10)
+        page = requests.get(f'https://boardgamegeek.com/xmlapi/boardgame/{this_game_id}', timeout=10, headers=headers)
         root = ET.fromstring(page.text)
     except requests.exceptions.RequestException as e:
         log_progress(f"Network error while fetching game data for ID {this_game_id}: {e}")
@@ -127,16 +135,13 @@ try:
 
     """extract list of game IDs of newly added game IDs"""
 
-
-
     query_statment = ("SELECT Id FROM BOARDGAMES")
     sql_boardgame_df = pd.read_sql(query_statment,conn)
     collection_df = collection_df.merge(sql_boardgame_df, on='Id', how='left', indicator=True)
     collection_df = collection_df[collection_df['_merge'] == 'left_only'].drop(columns=['_merge'])
     new_game_list = collection_df['Id'].to_list()
+
     """
-
-
     sql_id_list = sql_boardgame_df['Id'].to_list()
 
     new_game_list = list(set(extracted_id_list) - set(sql_id_list))
