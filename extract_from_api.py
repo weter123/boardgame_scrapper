@@ -135,11 +135,11 @@ try:
 
     """extract list of game IDs of newly added game IDs"""
 
-    query_statment = ("SELECT Id FROM BOARDGAMES")
-    sql_boardgame_df = pd.read_sql(query_statment,conn)
-    collection_df = collection_df.merge(sql_boardgame_df, on='Id', how='left', indicator=True)
-    collection_df = collection_df[collection_df['_merge'] == 'left_only'].drop(columns=['_merge'])
-    new_game_list = collection_df['Id'].to_list()
+    query_statement = ("SELECT Id FROM BOARDGAMES")
+    sql_boardgame_df = pd.read_sql(query_statement,conn)
+    new_game_df = collection_df.merge(sql_boardgame_df, on='Id', how='left', indicator=True)
+    new_game_df = new_game_df[new_game_df['_merge'] == 'left_only'].drop(columns=['_merge'])
+    new_game_list = new_game_df['Id'].to_list()
 
     """
     sql_id_list = sql_boardgame_df['Id'].to_list()
@@ -157,9 +157,9 @@ try:
     """ populate database with game data """
     collection_df['Id'] = collection_df['Id'].astype(int)
 
-    mechanics_df.to_sql("MECHANICS", conn, if_exists='append',index=False)
-    designer_df.to_sql("DESIGNERS", conn, if_exists='append',index=False)
-    collection_df.to_sql("BOARDGAMES",conn,if_exists='append',index=False)
+    mechanics_df.to_sql("MECHANICS", conn, if_exists='replace',index=False)
+    designer_df.to_sql("DESIGNERS", conn, if_exists='replace',index=False)
+    collection_df.to_sql("BOARDGAMES",conn,if_exists='replace',index=False)
 
     query_statment = ("SELECT * FROM BOARDGAMES")
     sql_boardgame_df = pd.read_sql(query_statment,conn)
