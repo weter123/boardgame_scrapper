@@ -51,7 +51,10 @@ def extract_from_xml(name):
             games_data.append({
                 'Id': int(child.attrib['objectid']),
                 'Name': child[0].text,
-                'Rating': rating 
+                'Rating': rating,
+                'Min Player Count': 0,
+                'Max Player Count': 0,
+                'Year Published':1900
             })
         temp_df =pd.DataFrame(games_data)    
     except requests.exceptions.RequestException as e:
@@ -77,13 +80,19 @@ def extract_game_data(this_game_id,mechanics_df, designer_df):
     designers_data = []
     for child in root:
         for sub in child:
+            if sub.tag == 'yearpublished' and sub.text:
+                collection_df.loc[collection_df['Id'] == this_game_id, 'Year Published'] = int(sub.text)
+            if sub.tag == 'minplayers' and sub.text:
+                collection_df.loc[collection_df['Id'] == this_game_id, 'Min Player Count'] = int(sub.text)
+            if sub.tag == 'maxplayers' and sub.text:
+                collection_df.loc[collection_df['Id'] == this_game_id, 'Max Player Count'] = int(sub.text)
             if sub.tag == 'boardgamemechanic' and sub.text:
                 mechanics_data.append({'Game Id': int(this_game_id), 'Game Mechanic': sub.text})
             elif sub.tag == 'boardgamedesigner' and sub.text:
                  designers_data.append({'Game Id': int(this_game_id), 'Game Designer': sub.text})
     mechanics_df = pd.concat([mechanics_df, pd.DataFrame(mechanics_data)], ignore_index=True)
     designer_df = pd.concat([designer_df, pd.DataFrame(designers_data)], ignore_index=True)
-    log_progress(f"extracted game mechanics and designers from {collection_df.loc[collection_df['Id'] == game_id, 'Name'].iloc[0]} ({i}/{len(new_game_list)})")
+    log_progress(f"extracted game mechanics and designers from {collection_df.loc[collection_df['Id'] == this_game_id, 'Name'].iloc[0]} ({i}/{len(new_game_list)})")
     return mechanics_df, designer_df
 
 def if_table_not_exists(conn, table_name):
@@ -93,7 +102,7 @@ def if_table_not_exists(conn, table_name):
         return True
     return False
 
-collection_df = pd.DataFrame()
+collection_df = pd.DataFrame(columns=['Id','Name', 'Rating','Min Player Count','Max Player Count','Year Published'])
 VALID = False
 
 """ prompt user for username input and run extract_from_xml function"""
@@ -114,10 +123,11 @@ try:
     mechanics_df = pd.DataFrame(columns = ['Game Id','Game Mechanic'])
     designer_df = pd.DataFrame(columns = ['Game Id','Game Designer'])
 
-
     if if_table_not_exists(conn, "BOARDGAMES"):
-        pd.DataFrame(columns=['Id','Name', 'Rating']).to_sql(
-            "BOARDGAMES",conn,if_exists='fail',index=False, dtype= { 'Id':'INTEGER','Name': 'TEXT','Rating': 'REAL'})
+        pd.DataFrame(columns=['Id','Name', 'Rating','Min Player Count','Max Player Count','Year Published']).to_sql(
+            "BOARDGAMES",conn,if_exists='fail',index=False, dtype= { 'Id':'INTEGER','Name': 'TEXT','Rating': 'REAL',
+                                                                    'Min Player Count': 'INTEGER','Max Player Count':'INTEGER',
+                                                                    'Year Published':'INTEGER'})
 
     if if_table_not_exists(conn, "MECHANICS"):
         mechanics_df.to_sql(
@@ -132,7 +142,7 @@ try:
         designer_df = pd.read_sql("SELECT * FROM DESIGNERS", conn)
 
     log_progress('Connecting to Database complete')
-
+    
     """extract list of game IDs of newly added game IDs"""
 
     query_statement = ("SELECT Id FROM BOARDGAMES")
@@ -148,10 +158,10 @@ try:
     """
 
     """ extract data of newly added games """
-    i = 1
+    i =1
     for game_id in new_game_list:
         mechanics_df, designer_df = extract_game_data(game_id,mechanics_df, designer_df)
-        i = i+1
+        i+=1
     log_progress('Game Mechanics extraction complete')
 
     """ populate database with game data """
